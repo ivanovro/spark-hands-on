@@ -9,8 +9,8 @@ class JoinDataFramesSpec extends Specification {
   sequential
 
   // Specify correct location of unzipped files
-  val countriesFile = "src/main/resources/input/countries.csv"
-  val dataFile = "src/main/resources/input/data.csv"
+  val countriesFile = "/Users/roman/Downloads/work/countries.csv"
+  val dataFile = "/Users/roman/Downloads/work/data.csv"
 
   "Joining two CSV DataFrames " should {
 

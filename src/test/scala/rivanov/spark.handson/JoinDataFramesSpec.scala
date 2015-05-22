@@ -14,7 +14,7 @@ class JoinDataFramesSpec extends Specification {
 
   "Joining two CSV DataFrames " should {
 
-    "it should be query with SQL" in {
+    "it should be possible to query with SQL" in {
       val sc: SparkContext = new SparkContext("local[*]", "JoinDF", new SparkConf())
       val app = new CsvDataFrames(sc, countriesFile, dataFile)
 

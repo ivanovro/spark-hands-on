@@ -24,7 +24,8 @@ class CsvDataFrames(sc: SparkContext, countriesFile: String, dataFile: String) {
                                               |      AND d.`2005` <> ''
                                               |      AND d.`Indicator Name` = 'Electricity production (kWh)'
                                               |      GROUP BY c.`Short Name`, c.`Region`, c.`Long Name`
-                                            """.stripMargin).orderBy('kWh.desc).take(5)
+                                              |      ORDER BY kWh DESC
+                                            """.stripMargin).take(5)
 
 
   private def csvDF(filePath: String, tableName: String, delimiter: String = "\\|"): DataFrame = {

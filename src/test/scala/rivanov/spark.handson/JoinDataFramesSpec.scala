@@ -1,6 +1,5 @@
 package rivanov.spark.handson
 
-import org.apache.spark.sql.Row
 import org.apache.spark.{SparkConf, SparkContext}
 import org.specs2.mutable.Specification
 
@@ -18,9 +17,10 @@ class JoinDataFramesSpec extends Specification {
       val sc: SparkContext = new SparkContext("local[*]", "JoinDF", new SparkConf())
       val app = new CsvDataFrames(sc, countriesFile, dataFile)
 
-      val results: Array[Row] = app.runMajorQuery()
+//      val results = app.runMajorSqlQuery()
+      val results = app.runRddApiQuery()
 
-      results.length == 5
+      results.length must_== 5
       results.foldLeft((true, Long.MaxValue))((a, x) => (a._2 > x.getLong(0), x.getLong(0)))._1 must beTrue
       results.head(1).toString must_== "United States"
 

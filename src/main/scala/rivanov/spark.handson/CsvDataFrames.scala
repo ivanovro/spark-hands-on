@@ -42,6 +42,9 @@ class CsvDataFrames(sc: SparkContext, countriesFile: String, dataFile: String, c
     def notEmpty: Column = column.col !== ""
 
     def intCast: Column = column.col.cast("bigint")
+
+    def <~>(other: Column): Column = column.col === other
+    
   }
 
 
@@ -56,7 +59,7 @@ class CsvDataFrames(sc: SparkContext, countriesFile: String, dataFile: String, c
   //Query functions
 
   def dataFramesQuery() =
-    countriesDF.join(dataDF, cCountryCode.col === dCountryCode.col)
+    countriesDF.join(dataDF, cCountryCode <~> dCountryCode)
       .filter(notEmpty2005)
       .filter(notEmptyLongName)
       .select(_2005.intCast.as(kWh), shortName, region, longName, indicatorName)
@@ -70,15 +73,15 @@ class CsvDataFrames(sc: SparkContext, countriesFile: String, dataFile: String, c
 
 
   def sqlQuery(take: Int = 5) = sqlContext.sql( """
-                                                          |SELECT MAX(CAST(d.`2005` AS BIGINT)) AS `kWh`, c.`Short Name`, c.`Region`, c.`Long Name`
-                                                          |    FROM data d JOIN countries c ON (d.`Country Code` = c.`Country Code`)
-                                                          |      WHERE c.`Region` <> '' AND c.`Region` <> 'World'
-                                                          |      AND c.`Long Name` <> ''
-                                                          |      AND d.`2005` <> ''
-                                                          |      AND d.`Indicator Name` = 'Electricity production (kWh)'
-                                                          |      GROUP BY c.`Short Name`, c.`Region`, c.`Long Name`
-                                                          |      ORDER BY kWh DESC
-                                                        """.stripMargin).take(take).map(Result.apply)
+                                                  |SELECT MAX(CAST(d.`2005` AS BIGINT)) AS `kWh`, c.`Short Name`, c.`Region`, c.`Long Name`
+                                                  |    FROM data d JOIN countries c ON (d.`Country Code` = c.`Country Code`)
+                                                  |      WHERE c.`Region` <> '' AND c.`Region` <> 'World'
+                                                  |      AND c.`Long Name` <> ''
+                                                  |      AND d.`2005` <> ''
+                                                  |      AND d.`Indicator Name` = 'Electricity production (kWh)'
+                                                  |      GROUP BY c.`Short Name`, c.`Region`, c.`Long Name`
+                                                  |      ORDER BY kWh DESC
+                                                """.stripMargin).take(take).map(Result.apply)
 
 
   // Initialization utils

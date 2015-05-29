@@ -19,46 +19,54 @@ class CsvDataFrames(sc: SparkContext, countriesFile: String, dataFile: String, c
   val dataDF = csvDF(dataFile, "data").as(dataAlias)
 
 
-  //Data fields
-
-  val cCountryCode = s"$countryAlias.Country Code"
-  val shortName = s"$countryAlias.Short Name"
-  val region = s"$countryAlias.Region"
-  val longName = s"$countryAlias.Long Name"
-  val kWh = "kWh"
-
-  val _2005 = s"$dataAlias.2005"
-  val dCountryCode = s"$dataAlias.Country Code"
-  val indicatorName = s"$dataAlias.Indicator Name"
-
-
   //Implicit helpers
 
-  implicit val toColumn: String => Column = s => s.col
-
-  implicit class ColumnConversions(column: String) {
+  implicit class ColumnsDSL(column: String) {
     def col: Column = Symbol(column)
 
-    def notEmpty: Column = column.col !== ""
+    def notEmpty: Column = ~!~("")
 
     def intCast: Column = column.col.cast("bigint")
 
-    def <~>(other: Column): Column = column.col === other
-    
+    def <~>(other: Column): Column = column === other
+
+    def ~~(value: String): Column = column === value
+
+    def ~!~(value: String): Column = column !== value
+  }
+
+  implicit val toColumn: String => Column = s => s.col
+
+  implicit class ColumnNamesInterpolator(val sc: StringContext) {
+    def c(args: Any*): String = s"$countryAlias.${sc.parts.head}"
+
+    def d(args: Any*): String = s"$dataAlias.${sc.parts.head}"
   }
 
 
+  //Data fields
+
+  val cCountryCode = c"Country Code"
+  val shortName = c"Short Name"
+  val region = c"Region"
+  val longName = c"Long Name"
+  val kWh = "kWh"
+
+  val _2005 = d"2005"
+  val dCountryCode = d"Country Code"
+  val indicatorName = d"Indicator Name"
+
   //Rules
 
-  val regionRestriction = region.notEmpty && (region.col !== "World")
-  val indicatorRestriction = indicatorName === "Electricity production (kWh)"
+  val regionRestriction = region.notEmpty && (region ~!~ "World")
+  val indicatorRestriction = indicatorName ~~ "Electricity production (kWh)"
   val notEmpty2005 = _2005.notEmpty
   val notEmptyLongName = longName.notEmpty
 
 
   //Query functions
 
-  def dataFramesQuery() =
+  def dataFramesQuery(take: Int = 5) =
     countriesDF.join(dataDF, cCountryCode <~> dCountryCode)
       .filter(notEmpty2005)
       .filter(notEmptyLongName)
@@ -68,7 +76,7 @@ class CsvDataFrames(sc: SparkContext, countriesFile: String, dataFile: String, c
       .groupBy(kWh, shortName, region, longName)
       .max(kWh)
       .orderBy(kWh.desc)
-      .take(5)
+      .take(take)
       .map(Result.apply)
 
 

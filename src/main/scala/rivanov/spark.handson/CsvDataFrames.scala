@@ -13,21 +13,36 @@ class CsvDataFrames(sc: SparkContext, countriesFile: String, dataFile: String) {
   import CsvDataFrames._
   import sqlContext.implicits._
 
-  val countriesDF = csvDF(countriesFile, "countries")
+  val countriesDF = csvDF(countriesFile, "countries").as("c")
 
-  val dataDF = csvDF(dataFile, "data")
+  val dataDF = csvDF(dataFile, "data").as("d")
 
-  def runRddApiQuery() = countriesDF.as("c").join(dataDF.as("d"), $"c.Country Code" === $"d.Country Code")
-    .filter($"d.2005" !== "")
-    .select($"d.2005".cast("bigint").as('kWh), $"c.Short Name", $"c.Region", $"c.Long Name", $"d.Indicator Name")
-    .where($"d.Indicator Name" === "Electricity production (kWh)")
-    .where(($"c.Region" !== "") && ($"c.Region" !== "World"))
-    .filter($"c.Long Name" !== "")
-    .groupBy('kWh, $"c.Short Name", $"c.Region", $"c.Long Name").max("kWh")
-    .orderBy('kWh.desc).take(5)
+  //country columns
+  val cCountryCode = $"c.Country Code"
+  val shortName = $"c.Short Name"
+  val region = $"c.Region"
+  val longName = $"c.Long Name"
+  val kWh = 'kWh
+
+  //data columns
+  val _2005 = $"d.2005"
+  val dCountryCode = $"d.Country Code"
+  val indicatorName = $"d.Indicator Name"
 
 
-  def runMajorSqlQuery() = sqlContext.sql( """
+  def runRddApiQuery(take: Int = 5) = countriesDF.join(dataDF, cCountryCode === dCountryCode)
+    .filter(_2005 !== "")
+    .select(_2005.cast("bigint").as(kWh), shortName, region, longName, indicatorName)
+    .where(indicatorName === "Electricity production (kWh)")
+    .where((region !== "") && (region !== "World"))
+    .filter(longName !== "")
+    .groupBy(kWh, shortName, region, longName).max(kWh.name)
+    .orderBy(kWh.desc)
+    .take(take)
+    .map(Result.apply)
+
+
+  def runMajorSqlQuery(take: Int = 5) = sqlContext.sql( """
                                              |SELECT MAX(CAST(d.`2005` AS BIGINT)) AS `kWh`, c.`Short Name`, c.`Region`, c.`Long Name`
                                              |    FROM data d JOIN countries c ON (d.`Country Code` = c.`Country Code`)
                                              |      WHERE c.`Region` <> '' AND c.`Region` <> 'World'
@@ -36,7 +51,7 @@ class CsvDataFrames(sc: SparkContext, countriesFile: String, dataFile: String) {
                                              |      AND d.`Indicator Name` = 'Electricity production (kWh)'
                                              |      GROUP BY c.`Short Name`, c.`Region`, c.`Long Name`
                                              |      ORDER BY kWh DESC
-                                           """.stripMargin).take(5)
+                                           """.stripMargin).take(take).map(Result.apply)
 
 
   private def csvDF(filePath: String, tableName: String, delimiter: String = "\\|"): DataFrame = {
@@ -56,6 +71,12 @@ class CsvDataFrames(sc: SparkContext, countriesFile: String, dataFile: String) {
     df
   }
 
+}
+
+case class Result(kWh: Long, countryName: String, region: String, longCountryName: String)
+
+object Result {
+  def apply(row: Row): Result = Result(row.getLong(0), row.getString(1), row.getString(2), row.getString(3))
 }
 
 object CsvDataFrames extends Serializable {

@@ -21,11 +21,11 @@ class JoinDataFramesSpec extends Specification {
       val results = app.runRddApiQuery()
 
       results.length must_== 5
-      results.foldLeft((true, Long.MaxValue))((a, x) => (a._2 > x.getLong(0), x.getLong(0)))._1 must beTrue
-      results.head(1).toString must_== "United States"
+      results.foldLeft((true, Long.MaxValue))((a, x) => (a._2 > x.kWh, x.kWh))._1 must beTrue
+      results.head.countryName.toString must_== "United States"
 
       println(f"${"kWh"}%15s ${"Country"}%25s ${"Region"}%25s ${"Long Name"}%30s")
-      results.foreach(r => println(f"${r(0)}%15s ${r(1)}%25s ${r(2)}%25s ${r(3)}%30s"))
+      results.foreach(r => println(f"${r.kWh}%15s ${r.countryName}%25s ${r.region}%25s ${r.longCountryName}%30s"))
 
       sc.stop()
       success

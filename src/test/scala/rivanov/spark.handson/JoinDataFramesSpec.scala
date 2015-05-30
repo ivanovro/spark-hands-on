@@ -1,21 +1,35 @@
 package rivanov.spark.handson
 
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.specs2.mutable.Specification
 
 class JoinDataFramesSpec extends Specification {
 
   sequential
+  stopOnFail
 
   // Specify correct location of unzipped files
   val countriesFile = "/Users/roman/Downloads/work/countries.csv"
   val dataFile = "/Users/roman/Downloads/work/data.csv"
 
   "Joining two CSV DataFrames " should {
+    val sc: SparkContext = new SparkContext("local[*]", "JoinDF", new SparkConf())
+    val app = new CsvDataFrames(countriesFile, dataFile, sc)
+
+    "filtering non integer rows when bigint cast is expected should work" in {
+      val schema = StructType(Seq(StructField("2005", StringType, nullable = true)))
+      val rdd = sc.parallelize(Seq("1234", "asdf", " ", "", "3456")).map(Row.apply(_))
+      val df = app.sqlContext.createDataFrame(rdd, schema)
+      df.registerTempTable("test2005")
+      val rows: Array[Long] = df.as("d").filter(app.isValidNum2005).select(app.asInt2005).map(_.getLong(0)).collect()
+      rows.length must_== 2
+      rows(0) must_== 1234
+      rows(1) must_== 3456
+    }
 
     "it should be possible to query with SQL" in {
-      val sc: SparkContext = new SparkContext("local[*]", "JoinDF", new SparkConf())
-      val app = new CsvDataFrames(countriesFile, dataFile, sc)
 
       val sqlResults = app.sqlQuery()
       val dfResults = app.dataFramesQuery()

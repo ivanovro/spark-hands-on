@@ -28,15 +28,15 @@ class CsvDataFrames(countriesFile: String,
   //Rules
   val regionRestriction = region.notEmpty && (region ~!~ "World")
   val indicatorRestriction = indicatorName ~~ "Electricity production (kWh)"
-  val notEmpty2005 = _2005.notEmpty
+  val isValidNum2005 = _2005.intCast.isNotNull
   val notEmptyLongName = longName.notEmpty
 
 
   def dataFramesQuery(take: Int = 5) =
     countriesDF.join(dataDF, cCountryCode <~> dCountryCode)
-      .filter(notEmpty2005)
-      .filter(notEmptyLongName)
+      .filter(isValidNum2005)
       .select(_2005.intCast.as(kWh), shortName, region, longName, indicatorName)
+      .filter(notEmptyLongName)
       .where(indicatorRestriction)
       .where(regionRestriction)
       .groupBy(kWh, shortName, region, longName)

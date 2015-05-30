@@ -1,70 +1,37 @@
 package rivanov.spark.handson
 
-import org.apache.spark.sql.{Column, Row, DataFrame, SQLContext}
+import org.apache.spark.sql.{Row, DataFrame, SQLContext}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.SparkContext
 
 import scala.reflect.io.File
 
-class CsvDataFrames(sc: SparkContext, countriesFile: String, dataFile: String, countryAlias: String = "c", dataAlias: String = "d") {
+class CsvDataFrames(sc: SparkContext, countriesFile: String, dataFile: String, override val countryAlias: String = "c", override val dataAlias: String = "d") extends DataFramesDSL {
 
   val sqlContext = new SQLContext(sc)
 
   import CsvDataFrames._
-  import sqlContext.implicits._
 
   //DataFrames
-
   val countriesDF = csvDF(countriesFile, "countries").as(countryAlias)
   val dataDF = csvDF(dataFile, "data").as(dataAlias)
 
-
-  //Implicit helpers
-
-  implicit class ColumnsDSL(column: String) {
-    def col: Column = Symbol(column)
-
-    def notEmpty: Column = ~!~("")
-
-    def intCast: Column = column.col.cast("bigint")
-
-    def <~>(other: Column): Column = column === other
-
-    def ~~(value: String): Column = column === value
-
-    def ~!~(value: String): Column = column !== value
-  }
-
-  implicit val toColumn: String => Column = s => s.col
-
-  implicit class ColumnNamesInterpolator(val sc: StringContext) {
-    def c(args: Any*): String = s"$countryAlias.${sc.parts.head}"
-
-    def d(args: Any*): String = s"$dataAlias.${sc.parts.head}"
-  }
-
-
   //Data fields
-
   val cCountryCode = c"Country Code"
   val shortName = c"Short Name"
   val region = c"Region"
   val longName = c"Long Name"
-  val kWh = "kWh"
-
   val _2005 = d"2005"
   val dCountryCode = d"Country Code"
   val indicatorName = d"Indicator Name"
+  val kWh = "kWh"
 
   //Rules
-
   val regionRestriction = region.notEmpty && (region ~!~ "World")
   val indicatorRestriction = indicatorName ~~ "Electricity production (kWh)"
   val notEmpty2005 = _2005.notEmpty
   val notEmptyLongName = longName.notEmpty
 
-
-  //Query functions
 
   def dataFramesQuery(take: Int = 5) =
     countriesDF.join(dataDF, cCountryCode <~> dCountryCode)

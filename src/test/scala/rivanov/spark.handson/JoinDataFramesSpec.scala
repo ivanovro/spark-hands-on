@@ -29,7 +29,7 @@ class JoinDataFramesSpec extends Specification {
       rows(1) must_== 3456
     }
 
-    "it should be possible to query with SQL" in {
+    "Query with SQL and DataFrames API should produce same results" in {
 
       val sqlResults = app.sqlQuery()
       val dfResults = app.dataFramesQuery()

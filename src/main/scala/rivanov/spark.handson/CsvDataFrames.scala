@@ -1,22 +1,21 @@
 package rivanov.spark.handson
 
-import org.apache.spark.sql.{Row, DataFrame, SQLContext}
-import org.apache.spark.sql.types.{StringType, StructField, StructType}
+import org.apache.spark.sql.{Row, SQLContext}
 import org.apache.spark.SparkContext
 
-import scala.reflect.io.File
-
-class CsvDataFrames(sc: SparkContext, countriesFile: String, dataFile: String, override val countryAlias: String = "c", override val dataAlias: String = "d") extends DataFramesDSL {
+class CsvDataFrames(countriesFile: String,
+                    dataFile: String,
+                    override val sc: SparkContext,
+                    override val countryAlias: String = "c",
+                    override val dataAlias: String = "d") extends CsvHelper with ColumnsDSL {
 
   val sqlContext = new SQLContext(sc)
-
-  import CsvDataFrames._
 
   //DataFrames
   val countriesDF = csvDF(countriesFile, "countries").as(countryAlias)
   val dataDF = csvDF(dataFile, "data").as(dataAlias)
 
-  //Data fields
+  //Columns names
   val cCountryCode = c"Country Code"
   val shortName = c"Short Name"
   val region = c"Region"
@@ -59,42 +58,10 @@ class CsvDataFrames(sc: SparkContext, countriesFile: String, dataFile: String, o
                                                 """.stripMargin).take(take).map(Result.apply)
 
 
-  // Initialization utils
-
-  private def csvDF(filePath: String, tableName: String, delimiter: String = "\\|"): DataFrame = {
-
-    assert(File(filePath).exists, s"file '$filePath' is not available")
-
-    val fileRdd = sc.textFile(filePath)
-
-    val header = fileRdd.first().split(delimiter)
-    val schema = StructType(header.map(field => StructField(field, StringType, nullable = true)))
-
-    val csvRdd = fileRdd.map(csv => correctResult(csv.split(delimiter), header.length)).filter(skipHeader(header)).map(toRow)
-
-    val df = sqlContext.createDataFrame(csvRdd, schema)
-    df.registerTempTable(tableName)
-
-    df
-  }
-
 }
 
 case class Result(kWh: Long, countryName: String, region: String, longCountryName: String)
 
 object Result {
   def apply(row: Row): Result = Result(row.getLong(0), row.getString(1), row.getString(2), row.getString(3))
-}
-
-object CsvDataFrames extends Serializable {
-
-  val skipHeader: Array[String] => Array[String] => Boolean = header => csv => csv(0) != header(0)
-
-  val correctResult: (Array[String], Int) => Array[String] = (csv, headerSize) => {
-    val result = Array.fill(headerSize)("")
-    csv.copyToArray(result)
-    result
-  }
-
-  val toRow: Array[String] => Row = csv => Row.fromSeq(csv)
 }

@@ -5,7 +5,7 @@ import org.apache.spark.sql.{Column, SQLContext}
 /**
  * Provides usability and abstraction on top of DataFrames Columns in order to work only with column names
  */
-trait DataFramesDSL {
+trait ColumnsDSL {
 
   val sqlContext: SQLContext
 
